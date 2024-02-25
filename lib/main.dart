@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_count_up/provider.dart';
 
+import 'data/count_data.dart';
+
 void main() {
   runApp(const ProviderScope(
     child: MyApp(),
@@ -33,8 +35,21 @@ class MyHomePage extends ConsumerStatefulWidget {
 class _MyHomePageState extends ConsumerState<MyHomePage> {
   @override
   Widget build(BuildContext context) {
-    // countUpの値だけ再描画すればいいが、全体が再描画される
     print('MyHomePage rebuild');
+
+    // watchで監視しているProviderの値が変更されると再描画される
+    // readに変更すると再描画されない
+    final state = ref.watch(countDataProvider);
+
+    // readでProviderの値を取得し、notifierでProviderの値を変更する
+    // watchで監視しているProviderの値が変更されると再描画される
+    // この場合は、countDataProviderの値が変更されると再描画される
+    final stateNotifier = ref.read(countDataProvider.notifier);
+
+    // selectで指定したstateのみ再描画を行う
+    String selectToString({required Function(CountData) function}) =>
+        ref.watch(countDataProvider.select(function)).toString();
+
     return Scaffold(
       appBar: AppBar(title: Consumer(
         builder: (BuildContext context, WidgetRef ref, Widget? child) {
@@ -48,19 +63,23 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
             Text(
               ref.watch(countUpDetail),
             ),
-            Text(
-              ref.watch(countProvider).toString(),
-            ),
+            Text(selectToString(function: (data) => data.count)),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 FloatingActionButton(
-                  onPressed: () => ref.watch(countProvider.notifier).state++,
+                  onPressed: () => stateNotifier.state = state.copyWith(
+                    count: state.count + 1,
+                    countUp: state.countUp + 1,
+                  ),
                   tooltip: 'Increment',
                   child: const Icon(Icons.add),
                 ),
                 FloatingActionButton(
-                  onPressed: () => ref.watch(countProvider.notifier).state++,
+                  onPressed: () => stateNotifier.state = state.copyWith(
+                    count: state.count - 1,
+                    countDown: state.countDown + 1,
+                  ),
                   tooltip: 'Increment',
                   child: const Icon(Icons.remove),
                 )
@@ -69,16 +88,19 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Text('1'),
-                Text('2'),
+                Text(selectToString(function: (data) => data.countUp)),
+                Text(selectToString(function: (data) => data.countDown)),
               ],
             )
-          ]
-          ,
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => {},
+        onPressed: () => stateNotifier.state = const CountData(
+          count: 0,
+          countUp: 0,
+          countDown: 0,
+        ),
         tooltip: 'Increment',
         child: const Icon(Icons.refresh),
       ),
